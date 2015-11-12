@@ -1,6 +1,6 @@
 #include "stdio.h"
 /**
-    测试程序这是注释
+*   这是多行注释
 */
 int main() {    // 这是注释
     int a = 0;
@@ -20,5 +20,11 @@ int main() {    // 这是注释
     default:
         a = 1;
     }
+    char xyz = 'a';
+    char c = '\t';
+    c= '\g';    // 错误
+    xyz = 'a123';   // 错误
+    b = 12.R;   // 错误
+    a = ~`; // 错误
 }
 

@@ -1,4 +1,6 @@
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Vboar on 2015/11/11.
@@ -12,7 +14,7 @@ public class Lex {
         "sizeof", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile",
         "while"};
 
-    // 分隔符/界符
+    // 界符
     private static final char[] delimiters = {';', ',', '(', ')', '{', '}', '[', ']', '.', ':'};
 
     // 转义字符
@@ -24,6 +26,13 @@ public class Lex {
     // 存储的结果
     private StringBuilder result;
     private String buffer;
+    private int position;
+
+    // 符号表
+    private List<String> symbolTable = new ArrayList<String>();
+
+    // 常量表
+    private List<String> constTable = new ArrayList<String>();
 
     public static void main(String[] args) {
         new Lex().scanner();
@@ -51,7 +60,7 @@ public class Lex {
                         state = 2;
                         return;
                     } else if (isDelimiter(c)) {
-                        buffer = "( " + c + " , 分隔符 )\n";
+                        buffer = "< " + c + " , 界符 >\n";
                         result.append(buffer);
                         buffer = "";
                         state = 0;
@@ -108,6 +117,10 @@ public class Lex {
                         buffer += c;
                         state = 15;
                         return;
+                    } else if (c == '%') {
+                        buffer += c;
+                        state = 32;
+                        return;
                     } else if (c == '#') {
                         buffer += c;
                         state = 99;
@@ -130,7 +143,8 @@ public class Lex {
                         state = 16;
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 整数常量 )\n";
+                        position = inConstTable(buffer);
+                        buffer = "< " + buffer + " , 整数常量 , " + position + " >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
@@ -151,7 +165,8 @@ public class Lex {
                         state = 17;
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 浮点数常量 )\n";
+                        position = inConstTable(buffer);
+                        buffer = "< " + buffer + " , 浮点数常量 , " + position + " >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
@@ -164,9 +179,10 @@ public class Lex {
                         return;
                     } else {
                         if (isKeyword(buffer)) {
-                            buffer = "( " + buffer + " , 关键字 )\n";
+                            buffer = "< " + buffer + " , 关键字 >\n";
                         } else {
-                            buffer = "( " + buffer + " , 标识符 )\n";
+                            position = inSymbolTable(buffer);
+                            buffer = "< " + buffer + " , 标识符 , " + position + " >\n";
                         }
                         result.append(buffer);
                         state = 0;
@@ -187,7 +203,7 @@ public class Lex {
                         state = 20;
                         return;
                     } else {    // '/'
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
@@ -218,7 +234,7 @@ public class Lex {
                         return;
                     }
                 case 20:
-                    buffer = "( " + buffer + " , 操作符 )\n";
+                    buffer = "< " + buffer + " , 操作符 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -243,6 +259,7 @@ public class Lex {
                         return;
                     } else {
                         fail("非法的转义字符");
+                        state = 33;
                         return;
                     }
                 case 23:
@@ -251,11 +268,30 @@ public class Lex {
                         state = 24;
                         continue;
                     } else {
+                        buffer += c;
+                        state = 31;
+                        return;
+                    }
+                case 33:
+                    if (c == '\'') {
+                        state = 0;
+                        return;
+                    } else {
+                        state = 33;
+                        return;
+                    }
+                case 31:
+                    if (c == '\'') {
                         fail("字符常量长度大于1");
+                        return;
+                    } else {
+                        buffer += c;
+                        state = 31;
                         return;
                     }
                 case 24:
-                    buffer = "( " + buffer + " , 字符常量 )\n";
+                    position = inConstTable(buffer);
+                    buffer = "< " + buffer + " , 字符常量 , " + position + " >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -275,7 +311,8 @@ public class Lex {
                         return;
                     }
                 case 25:
-                    buffer = "( " + buffer + " , 字符串常量 )\n";
+                    position = inConstTable(buffer);
+                    buffer = "< " + buffer + " , 字符串常量 , " + position + " >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -287,6 +324,15 @@ public class Lex {
                         return;
                     } else {
                         fail("非法的转义字符");
+                        state = 34;
+                        return;
+                    }
+                case 34:
+                    if (c == '\"') {
+                        state = 0;
+                        return;
+                    } else {
+                        state = 34;
                         return;
                     }
                 case 6: // +
@@ -295,14 +341,14 @@ public class Lex {
                         state = 27;
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 27:
-                    buffer = "( " + buffer + " , 操作符 )\n";
+                    buffer = "< " + buffer + " , 操作符 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -313,14 +359,14 @@ public class Lex {
                         state = 28;
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 28:
-                    buffer = "( " + buffer + " , 操作符 )\n";
+                    buffer = "< " + buffer + " , 操作符 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -328,13 +374,13 @@ public class Lex {
                 case 8:
                     if (c == '=') {
                         buffer += c;
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
@@ -346,14 +392,14 @@ public class Lex {
                         state = 29;
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 29:
-                    buffer = "( " + buffer + " , 操作符 )\n";
+                    buffer = "< " + buffer + " , 操作符 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -364,14 +410,14 @@ public class Lex {
                         state = 30;
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 30:
-                    buffer = "( " + buffer + " , 操作符 )\n";
+                    buffer = "< " + buffer + " , 操作符 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -379,13 +425,13 @@ public class Lex {
                 case 11:    // ^
                     if (c == '=') {
                         buffer += c;
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
@@ -394,43 +440,43 @@ public class Lex {
                 case 12:    // !
                     if (c == '=') {
                         buffer += c;
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 13:    // >
-                    if (c == '=') {
+                    if (c == '=' || c == '>') {
                         buffer += c;
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 14:    // <
-                    if (c == '=') {
+                    if (c == '=' || c == '<') {
                         buffer += c;
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
@@ -439,26 +485,41 @@ public class Lex {
                 case 15:    // =
                     if (c == '=') {
                         buffer += c;
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         return;
                     } else {
-                        buffer = "( " + buffer + " , 操作符 )\n";
+                        buffer = "< " + buffer + " , 操作符 >\n";
+                        result.append(buffer);
+                        state = 0;
+                        buffer = "";
+                        continue;
+                    }
+                case 32:    // %
+                    if (c == '=') {
+                        buffer += c;
+                        buffer = "< " + buffer + " , 操作符 >\n";
+                        result.append(buffer);
+                        state = 0;
+                        buffer = "";
+                        return;
+                    } else {
+                        buffer = "< " + buffer + " , 操作符 >\n";
                         result.append(buffer);
                         state = 0;
                         buffer = "";
                         continue;
                     }
                 case 99:
-                    buffer = "( " + buffer + " , 特殊符号 )\n";
+                    buffer = "< " + buffer + " , 特殊符号 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
                     continue;
                 case 100:
-                    buffer = "( " + buffer + " , 结束符号 )\n";
+                    buffer = "< " + buffer + " , 特殊符号 >\n";
                     result.append(buffer);
                     state = 0;
                     buffer = "";
@@ -478,10 +539,25 @@ public class Lex {
                 tokenizer('\n');
             }
             tokenizer('$');
-            System.out.println(result);
             br.close();
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("output.txt")));
-            bw.write(result.toString());
+            String temp = "Token序列如下：\n" + result;
+            System.out.println(temp);
+            bw.write(temp);
+            System.out.print("符号表如下:\n");
+            bw.write("\n符号表如下:\n");
+            for (int i = 0; i < symbolTable.size(); i++) {
+                temp = i + "\t" + symbolTable.get(i) + "\n";
+                System.out.print(temp);
+                bw.write(temp);
+            }
+            System.out.print("\n常量表如下:\n");
+            bw.write("\n常量表如下:\n");
+            for (int i = 0; i < constTable.size(); i++) {
+                temp = i + "\t" + constTable.get(i) + "\n";
+                System.out.print(temp);
+                bw.write(temp);
+            }
             bw.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -556,6 +632,32 @@ public class Lex {
             if (c == ch) return true;
         }
         return false;
+    }
+
+    /**
+     * 插入并返回标识符在符号表的位置
+     * @param s
+     * @return
+     */
+    private int inSymbolTable(String s) {
+        for (int i = 0; i < symbolTable.size(); i++) {
+            if (s.equals(symbolTable.get(i))) return i;
+        }
+        symbolTable.add(s);
+        return symbolTable.size()-1;
+    }
+
+    /**
+     * 插入并返回常量在常量表的位置
+     * @param s
+     * @return
+     */
+    private int inConstTable(String s) {
+        for (int i = 0; i < constTable.size(); i++) {
+            if (s.equals(constTable.get(i))) return i;
+        }
+        constTable.add(s);
+        return constTable.size()-1;
     }
 
 }
