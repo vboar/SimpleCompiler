@@ -9,10 +9,10 @@ public class Lex {
 
     // ANSI C 定义的32个关键字
     private static final String[] keywords = {"auto", "break", "case", "char", "const",
-        "continue", "default", "do", "double", "else", "enum", "extern", "float", "for",
-        "goto", "if", "int", "long", "register", "return", "short", "signed", "static",
-        "sizeof", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile",
-        "while"};
+            "continue", "default", "do", "double", "else", "enum", "extern", "float", "for",
+            "goto", "if", "int", "long", "register", "return", "short", "signed", "static",
+            "sizeof", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile",
+            "while"};
 
     // 界符
     private static final char[] delimiters = {';', ',', '(', ')', '{', '}', '[', ']', '.', ':'};
@@ -30,12 +30,6 @@ public class Lex {
     // 存储的结果
     private List<Token> tokenList = new ArrayList<Token>(); // Token序列
     private List<String> symbolTable = new ArrayList<String>(); // 符号表（标识符表）
-
-    public static void main(String[] args) {
-        Lex lex = new Lex();
-        lex.scanner();
-        lex.output();
-    }
 
     private void tokenizer(char c) {
         while (true) {
@@ -558,7 +552,7 @@ public class Lex {
 
     /**
      * 判断是否为关键字
-      * @param s
+     * @param s
      * @return
      */
     private boolean isKeyword(String s) {
@@ -612,6 +606,30 @@ public class Lex {
         }
         symbolTable.add(s);
         return symbolTable.size()-1;
+    }
+
+    /**
+     * 获得简化后的Token序列
+     * @return
+     */
+    public List<String> getToken() {
+        List<String> list = new ArrayList<String>();
+        for (Token token: tokenList) {
+            if (token.getType().equals("_NUM")) {
+                list.add("NUM");
+            } else if (token.getType().equals("_CHAR")) {
+                list.add("CHAR");
+            } else if (token.getType().equals("_STRING")) {
+                list.add("STRING");
+            } else if (token.getType().equals("_ID")) {
+                list.add("ID");
+            } else if (token.getType().equals("_ERROR")) {
+                continue;
+            } else {
+                list.add(token.getValue());
+            }
+        }
+        return list;
     }
 
 }

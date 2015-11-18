@@ -1,0 +1,37 @@
+<Program> -> <Function>
+<Function> -> [void] <FuncName> [(] <Para> [)] [{] <Statement> [}]
+<Function> -> <DataType> <FuncName> [(] <Para> [)] [{] <Statement> <Return> [}]
+<FuncName> -> [ID]
+<Para> -> [ε]
+<Para> -> <DataType> [ID]
+<Statement> -> <S> <Statement>
+<Statement> -> [ε]
+<S> -> <DataType> [ID] <M>
+<M> -> [;]
+<M> -> [=] [NUM] [;]
+<S> -> [ID] [=] <Keyword> <N>
+<N> -> [;]
+<N> -> <OP> <Keyword> [;]
+<S> -> [if] [(] <C> [)] <B> <D>
+<D> -> [else] <B>
+<D> -> [ε]
+<B> -> [{] <Statement> [}]
+<C> -> <Keyword> <CompareOP> <Keyword>
+<S> -> [while] [(] <C> [)] <B>
+<DataType> -> [int]
+<DataType> -> [float]
+<DataType> -> [double]
+<OP> -> [+]
+<OP> -> [-]
+<OP> -> [*]
+<OP> -> [/]
+<OP> -> [%]
+<CompareOP> -> [==]
+<CompareOP> -> [!=]
+<CompareOP> -> [>=]
+<CompareOP> -> [<=]
+<CompareOP> -> [>]
+<CompareOP> -> [<]
+<Keyword> -> [ID]
+<Keyword> -> [NUM]
+<Return> -> [return] <Keyword> [;]
